@@ -1,0 +1,47 @@
+/* Layout Component Styles */
+.layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: 64px auto;
+    min-height: 100vh;
+    gap: var(--spacing-md);
+}
+
+.header {
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 var(--spacing-md);
+    /* background-color: var(--bg-card); -- Transparent/integrated as per ref mostly */
+}
+
+/* Dashboard Content Grid */
+.dashboard-grid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+    padding-bottom: var(--spacing-xl);
+    max-width: 1600px;
+    /* Optional: keep it from getting too wide on huge screens? User said "page wide" though. */
+    margin: 0;
+}
+
+.main-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+}
+
+.sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+/* Responsive adjustment */
+@media (max-width: 1200px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+}
