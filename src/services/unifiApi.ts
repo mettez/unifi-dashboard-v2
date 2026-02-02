@@ -4,40 +4,7 @@ const API_PREFIX = '/api';
 
 // State to track if we need the /proxy/network prefix (UDM/Unifi OS)
 let isUnifiOs = false;
-let cachedFirmwareVersion: string | null = null;
 
-// Helper to construct URLs dynamically
-const getUrl = (path: string) => {
-    // If it's a stats path and we are on Unifi OS, prepend /proxy/network
-    if (isUnifiOs && path.startsWith('/s/')) {
-        return `${API_PREFIX}/proxy/network${path}`; // Note: API_PREFIX is /api, so /api/proxy/network... NO.
-        // The proxy in vite forwards /api -> https://target/api
-        // UDM needs https://target/proxy/network/api/s/...
-        // So we need to request /api/proxy/network/api/s/... via our vite proxy?
-        // OUR Vite proxy maps /api/* -> target/api/*.
-        // If we request /api/proxy/network/api/s/..., it maps to target/api/proxy/network... INVALID.
-
-        // We need to adjust the Vite proxy or usage.
-        // Current Vite Proxy: '/api' -> target/api
-        // If target is https://192.168.1.1
-        // Fetch('/api/auth/login') -> https://192.168.1.1/api/auth/login
-
-        // UDM Data path: https://192.168.1.1/proxy/network/api/s/default/...
-        // If we use current proxy: Fetch('/api/proxy/network/api/s/...') -> https://192.168.1.1/api/proxy/network... WRONG.
-    }
-    // Let's fix this in the logic below, assuming we might need to adjust vite config or just logic.
-    // For now, let's keep simple logic and maybe just changing the proxy config in next step is better? 
-    // No, simple fix:
-    // If we detect UnifiOS, we probably need to fetch `/proxy/network/api/s/...` 
-    // But our Vite proxy only proxies `/api`.
-    // So we should probably proxy `/` or specific paths.
-
-    // EASIER FIX:
-    // Change Vite Proxy to proxy `^/api/` -> `https://target/api/` matches.
-    // AND proxy `^/proxy/` -> `https://target/proxy/`
-
-    return `${API_PREFIX}${path}`;
-};
 
 
 export const unifiApi = {
@@ -62,7 +29,6 @@ export const unifiApi = {
             const headerVersion = response.headers.get('x-unifi-os-version');
             if (headerVersion) {
                 console.log("Found UniFi OS version in headers:", headerVersion);
-                cachedFirmwareVersion = headerVersion;
             }
 
             try {
