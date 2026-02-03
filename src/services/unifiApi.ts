@@ -7,6 +7,29 @@ let isUnifiOs = false;
 
 
 
+// Helper to handle session timeout (401/403) by re-logging in automatically
+const fetchWithAuth = async (url: string, options: RequestInit = {}, retries = 1): Promise<Response> => {
+    try {
+        const response = await fetch(url, { ...options, credentials: 'include' });
+
+        if (response.status === 401 || response.status === 403) {
+            if (retries > 0) {
+                console.warn(`Auth failed (${response.status}) at ${url}. Attempting re-login...`);
+                // Attempt to re-login
+                await unifiApi.login();
+                // Retry the original request
+                return fetchWithAuth(url, options, retries - 1);
+            } else {
+                console.error("Re-login failed. Session expired.");
+                // Optionally: window.location.reload(); to hard reset if truly stuck
+            }
+        }
+        return response;
+    } catch (e) {
+        throw e;
+    }
+};
+
 export const unifiApi = {
     login: async () => {
         console.log("Attempting Unifi OS Login...");
@@ -76,7 +99,7 @@ export const unifiApi = {
                 path = `/proxy/network/api/s/default/stat/device`;
             }
 
-            const response = await fetch(path, { credentials: 'include' });
+            const response = await fetchWithAuth(path);
             if (!response.ok) throw new Error(`Failed to fetch devices from ${path}: ${response.status} ${response.statusText}`);
             const data = await response.json();
 
@@ -123,7 +146,7 @@ export const unifiApi = {
                 sysPath = `/proxy/network/api/s/default/stat/sysinfo`;
             }
 
-            const sysResponse = await fetch(sysPath, { credentials: 'include' });
+            const sysResponse = await fetchWithAuth(sysPath);
             const sysData = await sysResponse.json();
             const controllerVer = sysData.data?.[0]?.version || 'Unknown';
 
@@ -151,8 +174,8 @@ export const unifiApi = {
             }
 
             const [healthResponse, sysResponse] = await Promise.all([
-                fetch(healthPath, { credentials: 'include' }),
-                fetch(sysPath, { credentials: 'include' })
+                fetchWithAuth(healthPath),
+                fetchWithAuth(sysPath)
             ]);
 
             const healthData = await healthResponse.json();
