@@ -30,16 +30,44 @@ const fetchWithAuth = async (url: string, options: RequestInit = {}, retries = 1
     }
 };
 
+// Runtime config storage
+let runtimeConfig = {
+    username: import.meta.env.VITE_UNIFI_USERNAME,
+    password: import.meta.env.VITE_UNIFI_PASSWORD
+};
+
 export const unifiApi = {
+    loadConfig: async () => {
+        // Only fetch config if in production (not DEV mode) to check for server.js override
+        if (!import.meta.env.DEV) {
+            try {
+                const res = await fetch('/config');
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.username && data.password) {
+                        console.log("Loaded runtime config from server.js");
+                        runtimeConfig.username = data.username;
+                        runtimeConfig.password = data.password;
+                    }
+                }
+            } catch (e) {
+                console.warn("Failed to load /config, defaulting to build env vars", e);
+            }
+        }
+    },
+
     login: async () => {
+        // Ensure config is loaded
+        await unifiApi.loadConfig();
+
         console.log("Attempting Unifi OS Login...");
         // Try UDM / Unifi OS Login first
         let response = await fetch(`${API_PREFIX}/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                username: import.meta.env.VITE_UNIFI_USERNAME,
-                password: import.meta.env.VITE_UNIFI_PASSWORD,
+                username: runtimeConfig.username,
+                password: runtimeConfig.password,
             }),
             credentials: 'include',
         });
@@ -68,8 +96,8 @@ export const unifiApi = {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                username: import.meta.env.VITE_UNIFI_USERNAME,
-                password: import.meta.env.VITE_UNIFI_PASSWORD,
+                username: runtimeConfig.username,
+                password: runtimeConfig.password,
             }),
             credentials: 'include',
         });

@@ -49,6 +49,17 @@ const getContentType = (filePath) => {
 };
 
 const server = http.createServer((req, clientRes) => {
+    // 0. Runtime Config Endpoint (Internal API)
+    if (req.url === '/config') {
+        clientRes.writeHead(200, { 'Content-Type': 'application/json' });
+        clientRes.end(JSON.stringify({
+            username: env.VITE_UNIFI_USERNAME,
+            password: env.VITE_UNIFI_PASSWORD,
+            url: env.VITE_UNIFI_CONTROLLER_URL
+        }));
+        return;
+    }
+
     // 1. Handle API Proxy requests
     if (req.url.startsWith('/api') || req.url.startsWith('/proxy')) {
         const targetUrl = new URL(req.url, TARGET);
@@ -80,8 +91,20 @@ const server = http.createServer((req, clientRes) => {
         };
 
         const proxyReq = https.request(targetUrl, options, (targetRes) => {
+            // Forward headers back to client
             Object.keys(targetRes.headers).forEach(key => {
-                clientRes.setHeader(key, targetRes.headers[key]);
+                let value = targetRes.headers[key];
+
+                // Strip 'Secure' and 'SameSite' from cookies so they work on http://localhost
+                if (key.toLowerCase() === 'set-cookie') {
+                    if (Array.isArray(value)) {
+                        value = value.map(v => v.replace(/; Secure/gi, '').replace(/; SameSite=Strict/gi, '; SameSite=Lax'));
+                    } else if (typeof value === 'string') {
+                        value = value.replace(/; Secure/gi, '').replace(/; SameSite=Strict/gi, '; SameSite=Lax');
+                    }
+                }
+
+                clientRes.setHeader(key, value);
             });
             clientRes.writeHead(targetRes.statusCode);
             targetRes.pipe(clientRes);
