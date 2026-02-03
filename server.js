@@ -67,7 +67,9 @@ const server = http.createServer((req, clientRes) => {
         }
 
         // Pass cookies cleanly (except for login which needs fresh headers usually, but we pass anyway for session)
-        if (req.headers['cookie']) {
+        // UPDATE: logic from proxy.js to prevent 403 loops on login
+        const isLogin = req.url.includes('/login');
+        if (!isLogin && req.headers['cookie']) {
             headers['Cookie'] = req.headers['cookie'];
         }
 
